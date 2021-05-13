@@ -552,6 +552,20 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
         }
     }
 
+
+    @ReactMethod
+    public void getIsWiredHeadsetPluggedIn(Promise promise) {
+        AudioManager audioManager = (AudioManager)getReactApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+        AudioDeviceInfo[] audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_ALL);
+        for(AudioDeviceInfo deviceInfo : audioDevices){
+            if(deviceInfo.getType()==AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+                    || deviceInfo.getType()==AudioDeviceInfo.TYPE_WIRED_HEADSET){
+                promise.resolve(true);
+            }
+        }
+        promise.resolve(false);
+    }
+
     @ReactMethod
     public void start(final String _media, final boolean auto, final String ringbackUriType) {
         media = _media;
@@ -1469,7 +1483,6 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
     @ReactMethod
     public void chooseAudioRoute(String audioRoute, Promise promise) {
         Log.d(TAG, "RNInCallManager.chooseAudioRoute(): user choose audioDevice = " + audioRoute);
-
         if (audioRoute.equals(AudioDevice.EARPIECE.name())) {
             selectAudioDevice(AudioDevice.EARPIECE);
         } else if (audioRoute.equals(AudioDevice.SPEAKER_PHONE.name())) {

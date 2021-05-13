@@ -308,7 +308,7 @@ Note: iOS only supports `auto` currently.
 | stopRingtone()   | :smile: | :smile: | stop play ringtone if previous started via `startRingtone()` |
 | stopRingback()   | :smile: | :smile: | stop play ringback if previous started via `start()` |
 | setFlashOn(`enable: ?boolean, brightness: ?number`)  | :rage: | :smile: | set flash light on/off |
-| async getIsWiredHeadsetPluggedIn()  | :rage: | :smile: | return wired headset plugged in state |
+| async getIsWiredHeadsetPluggedIn()  | :smile: | :smile: | return wired headset plugged in state |
 
 
 

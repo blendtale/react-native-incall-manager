@@ -46,11 +46,10 @@ class InCallManager {
     }
 
     async getIsWiredHeadsetPluggedIn() {
-        if (Platform.OS === 'ios') {
+        try {
             return await _InCallManager.getIsWiredHeadsetPluggedIn();
-        } else {
-            console.log("Android doesn't support getIsWiredHeadsetPluggedIn() yet.");
-            return null;
+        } catch (e) {
+            throw new Error('Incall Manager Error getting wired headset')
         }
     }
 
@@ -180,6 +179,7 @@ class InCallManager {
 
     async chooseAudioRoute(route) {
         let result = await _InCallManager.chooseAudioRoute(route);
+        console.log('Audio Route:', result)
         return result;
     }
 }
