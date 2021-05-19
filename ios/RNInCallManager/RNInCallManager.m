@@ -659,9 +659,9 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
         }
     }
     if (!devices || !devices.count){
-        return true;
-    } else {
         return false;
+    } else {
+        return true;
     }
 }
 
@@ -1501,5 +1501,7 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
 //}
 
 @end
+
+
 
 
