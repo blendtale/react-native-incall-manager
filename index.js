@@ -179,7 +179,6 @@ class InCallManager {
 
     async chooseAudioRoute(route) {
         let result = await _InCallManager.chooseAudioRoute(route);
-        console.log('Audio Route:', result)
         return result;
     }
 }

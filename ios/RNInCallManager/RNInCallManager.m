@@ -17,6 +17,7 @@
 
 @implementation RNInCallManager
 {
+        
     UIDevice *_currentDevice;
 
     AVAudioSession *_audioSession;
@@ -54,6 +55,8 @@
     NSString *_incallAudioCategory;
     NSString *_origAudioCategory;
     NSString *_origAudioMode;
+    NSString *_userSelectedAudioRoute;
+    NSString *_currentAudioRoute;
     BOOL _audioSessionInitialized;
     int _forceSpeakerOn;
     NSString *_recordPermission;
@@ -172,6 +175,47 @@ RCT_EXPORT_METHOD(start:(NSString *)mediaType
     //self.debugAudioSession()
 }
 
+RCT_EXPORT_METHOD(chooseAudioRoute: (NSString *)audioRoute  Promise:(RCTPromiseResolveBlock)resolve
+                                 reject:(RCTPromiseRejectBlock)reject) {
+    NSLog(@"Selected Audio Route: %@", audioRoute);
+    NSArray* routes = [_audioSession availableInputs];
+    BOOL isWiredHeadsetPluggedIn = [self isWiredHeadsetPluggedIn];
+    BOOL isBluetoothDeviceConnected = [self isBluetoothDeviceConnected];
+    NSLog(@"Available routes fromm chooseAudioRoute: %@", routes[0]);
+    NSLog(isWiredHeadsetPluggedIn ? @"Earphone connected" : @"Earphone not connected");
+    NSLog(isBluetoothDeviceConnected ? @"Bluetooth Device Connected" : @"Bluetooth Device not connected");
+    BOOL success;
+//    SPEAKER_PHONE,
+//    WIRED_HEADSET,
+//    EARPIECE,
+//    BLUETOOTH,
+//    NONE
+// TODO: Create enums for AudioRoute
+    _userSelectedAudioRoute = audioRoute;
+    if (![_userSelectedAudioRoute isEqualToString:_currentAudioRoute]) {
+        if ([audioRoute  isEqual: @"SPEAKER_PHONE"]) {
+            success = [self routeAudioFromSpeakerphone];
+        } else if ([audioRoute  isEqual: @"WIRED_HEADSET"] && isWiredHeadsetPluggedIn) {
+            
+        } else if ([audioRoute  isEqual: @"EARPIECE"]) {
+            success = [self routeAudioFromEarpiece];
+        } else if ([audioRoute  isEqual: @"BLUETOOTH"] && isBluetoothDeviceConnected) {
+            success = [self routeAudioFromBluetooth];
+        }
+        //TODO: Better Error Handling
+        if (success) {
+            resolve(@"Audio Route sucessfully changed");
+        } else {
+            reject(@"error_code", @"getAudioUriJS() failed", RCTErrorWithMessage(@"Failed to change audio route"));
+        }
+    }
+}
+
+- (void)updateAudioDeviceState:(NSString *)audioDevice {
+    // check if route exist and value isn't null
+    return;
+}
+
 RCT_EXPORT_METHOD(stop:(NSString *)busytoneUriType)
 {
     if (!_audioSessionInitialized) {
@@ -239,48 +283,109 @@ RCT_EXPORT_METHOD(setKeepScreenOn:(BOOL)enable)
     });
 }
 
+
+
 RCT_EXPORT_METHOD(setSpeakerphoneOn:(BOOL)enable)
 {
+    if(!enable){
+        [self routeAudioFromEarpiece];
+    } else {
+        [self routeAudioFromSpeakerphone];
+    }
+}
+
+- (BOOL)routeAudioFromBluetooth {
+    NSError *error = nil;
+    NSLog(@"Routing audio via Bluetooth");
+    // Set Input
+    _audioSession =  [AVAudioSession sharedInstance];
+    AVAudioSessionRouteDescription* route = [_audioSession currentRoute];
+    for (AVAudioSessionPortDescription* input in [_audioSession availableInputs]) {
+        if ([[input portType] isEqualToString:AVAudioSessionPortBluetoothHFP] ||
+            [[input portType] isEqualToString:AVAudioSessionPortBluetoothA2DP] ||
+            [[input portType] isEqualToString:AVAudioSessionPortBluetoothLE]) {
+            // Turn off current input
+            @try {
+                [_audioSession overrideOutputAudioPort:AVAudioSessionPortOverrideNone error:&error];
+            } @catch (NSException *e)  {
+                NSLog(@"Unable to override audio port none in bluetooth %@", e.reason);
+                return false;
+            }
+            // set current input to bluetooth
+            @try {
+                [_audioSession setPreferredInput:input error:&error];
+            } @catch (NSException *e)  {
+                NSLog(@"Unable to set audio input port to bluetooth%@", e.reason);
+                // Set Prefeered route to speaker
+                [self routeAudioFromSpeakerphone];
+                return false;
+            }
+        }
+    }
+    // set output
+    return true;
+}
+
+- (BOOL)routeAudioFromEarpiece {
+    BOOL success;
+    NSError *error = nil;
+    NSLog(@"Routing audio via Earpiece");
+    @try {
+        success = [_audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
+        if (!success)  NSLog(@"Cannot set category due to error: %@", error);
+        success = [_audioSession setMode:AVAudioSessionModeVoiceChat error:&error];
+        if (!success)  NSLog(@"Cannot set mode due to error: %@", error);
+        [_audioSession setPreferredOutputNumberOfChannels:0 error:nil];
+        if (!success)  NSLog(@"Port override failed due to: %@", error);
+        [_audioSession overrideOutputAudioPort:[AVAudioSessionPortBuiltInReceiver intValue] error:&error];
+        success = [_audioSession setActive:YES error:&error];
+        if (!success) {
+            NSLog(@"Audio session override failed: %@", error);
+            return false;
+        }
+        else {
+            NSLog(@"AudioSession override is successful ");
+            return true;
+        }
+    } @catch (NSException *e) {
+        NSLog(@"Error occurred while routing audio via Earpiece: %@", e.reason);
+        return false;
+    }
+}
+
+- (BOOL)routeAudioFromSpeakerphone
+{
+    NSLog(@"Routing audio via Loudspeaker");
     BOOL success;
     NSError *error = nil;
     NSArray* routes = [_audioSession availableInputs];
-
-    if(!enable){
-        NSLog(@"Routing audio via Earpiece");
-        @try {
-            success = [_audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
-            if (!success)  NSLog(@"Cannot set category due to error: %@", error);
-            success = [_audioSession setMode:AVAudioSessionModeVoiceChat error:&error];
-            if (!success)  NSLog(@"Cannot set mode due to error: %@", error);
-            [_audioSession setPreferredOutputNumberOfChannels:0 error:nil];
-            if (!success)  NSLog(@"Port override failed due to: %@", error);
-            [_audioSession overrideOutputAudioPort:[AVAudioSessionPortBuiltInReceiver intValue] error:&error];
-            success = [_audioSession setActive:YES error:&error];
-            if (!success) NSLog(@"Audio session override failed: %@", error);
-            else NSLog(@"AudioSession override is successful ");
-
-        } @catch (NSException *e) {
-            NSLog(@"Error occurred while routing audio via Earpiece: %@", e.reason);
-        }
-    } else {
-        NSLog(@"Routing audio via Loudspeaker");
-        @try {
-            NSLog(@"Available routes: %@", routes[0]);
-            success = [_audioSession setCategory:AVAudioSessionCategoryPlayAndRecord
+    @try {
+        NSLog(@"Available routes: %@", routes[0]);
+        success = [_audioSession setCategory:AVAudioSessionCategoryPlayAndRecord
                         withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker
                         error:nil];
-            if (!success)  NSLog(@"Cannot set category due to error: %@", error);
-            success = [_audioSession setMode:AVAudioSessionModeVoiceChat error: &error];
-            if (!success)  NSLog(@"Cannot set mode due to error: %@", error);
-            [_audioSession setPreferredOutputNumberOfChannels:0 error:nil];
-            [_audioSession overrideOutputAudioPort:[AVAudioSessionPortBuiltInSpeaker intValue] error: &error];
-            if (!success)  NSLog(@"Port override failed due to: %@", error);
-            success = [_audioSession setActive:YES error:&error];
-            if (!success) NSLog(@"Audio session override failed: %@", error);
-            else NSLog(@"AudioSession override is successful ");
-        } @catch (NSException *e) {
-            NSLog(@"Error occurred while routing audio via Loudspeaker: %@", e.reason);
+        if (!success)  {
+            NSLog(@"Cannot set category due to error: %@", error);
         }
+        success = [_audioSession setMode:AVAudioSessionModeVoiceChat error: &error];
+        if (!success)  {
+            NSLog(@"Cannot set mode due to error: %@", error);
+        }
+        [_audioSession setPreferredOutputNumberOfChannels:0 error:nil];
+        [_audioSession overrideOutputAudioPort:[AVAudioSessionPortBuiltInSpeaker intValue] error: &error];
+        if (!success)  {
+            NSLog(@"Port override failed due to: %@", error);
+        }
+        success = [_audioSession setActive:YES error:&error];
+        if (!success) {
+            NSLog(@"Audio session override failed: %@", error);
+            return false;
+        } else {
+            return true;
+        }
+    } @catch (NSException *e) {
+        NSLog(@"Error occurred while routing audio via Loudspeaker: %@", e.reason);
+        return false;
     }
 }
 
@@ -541,6 +646,23 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
     resolve(@{
         @"isWiredHeadsetPluggedIn": wiredHeadsetPluggedIn ? @YES : @NO,
     });
+}
+
+- (BOOL)isBluetoothDeviceConnected {
+    NSMutableArray *devices = [NSMutableArray array];
+    AVAudioSessionRouteDescription* route = [[AVAudioSession sharedInstance] currentRoute];
+    for (AVAudioSessionPortDescription* desc in [route outputs]) {
+        if ([[desc portType] isEqualToString:AVAudioSessionPortBluetoothHFP] ||
+            [[desc portType] isEqualToString:AVAudioSessionPortBluetoothA2DP] ||
+            [[desc portType] isEqualToString:AVAudioSessionPortBluetoothLE]) {
+            [devices addObject:[desc portName]];
+        }
+    }
+    if (!devices || !devices.count){
+        return true;
+    } else {
+        return false;
+    }
 }
 
 - (void)updateAudioRoute
@@ -1379,3 +1501,5 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
 //}
 
 @end
+
+
