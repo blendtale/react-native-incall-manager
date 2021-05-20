@@ -196,12 +196,14 @@ RCT_EXPORT_METHOD(chooseAudioRoute: (NSString *)audioRoute  Promise:(RCTPromiseR
     _userSelectedAudioRoute = audioRoute;
     if (![_userSelectedAudioRoute isEqualToString:_currentAudioRoute]) {
         if ([audioRoute  isEqual: @"SPEAKER_PHONE"]) {
+            _forceSpeakerOn = 1;
             success = [self routeAudioFromSpeakerphone];
         } else if ([audioRoute  isEqual: @"WIRED_HEADSET"] && isWiredHeadsetPluggedIn) {
             
         } else if ([audioRoute  isEqual: @"EARPIECE"]) {
             success = [self routeAudioFromEarpiece];
         } else if ([audioRoute  isEqual: @"BLUETOOTH"] && isBluetoothDeviceConnected) {
+            _forceSpeakerOn = 0;
             success = [self routeAudioFromBluetooth];
         }
         //TODO: Better Error Handling
@@ -334,6 +336,7 @@ RCT_EXPORT_METHOD(setSpeakerphoneOn:(BOOL)enable)
     NSError *error = nil;
     NSLog(@"Routing audio via Earpiece");
     @try {
+
         success = [_audioSession setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
         if (!success)  NSLog(@"Cannot set category due to error: %@", error);
         success = [_audioSession setMode:AVAudioSessionModeVoiceChat error:&error];
@@ -672,7 +675,7 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
 
 - (void)updateAudioRoute
 {
-    NSLog(@"RNInCallManager.updateAudioRoute(): [Enter] forceSpeakerOn flag=%d media=%@ category=%@ mode=%@", _forceSpeakerOn, _media, _audioSession.category, _audioSession.mode);
+    NSLog(@" 👉 RNInCallManager.updateAudioRoute(): [Enter] forceSpeakerOn flag=%d media=%@ category=%@ mode=%@", _forceSpeakerOn, _media, _audioSession.category, _audioSession.mode);
     //self.debugAudioSession()
 
     //AVAudioSessionPortOverride overrideAudioPort;
