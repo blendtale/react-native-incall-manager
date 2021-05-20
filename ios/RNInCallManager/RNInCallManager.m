@@ -362,7 +362,6 @@ RCT_EXPORT_METHOD(setSpeakerphoneOn:(BOOL)enable)
     BOOL success;
     NSError *error = nil;
     @try {
-        _forceSpeakerOn = 1;
         success = [_audioSession setCategory:AVAudioSessionCategoryPlayAndRecord
                         withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker
                         error:nil];
@@ -373,7 +372,6 @@ RCT_EXPORT_METHOD(setSpeakerphoneOn:(BOOL)enable)
         if (!success)  {
             NSLog(@"📕 Cannot set mode due to error: %@", error);
         }
-        [_audioSession setPreferredOutputNumberOfChannels:0 error:nil];
         [_audioSession overrideOutputAudioPort:[AVAudioSessionPortBuiltInSpeaker intValue] error: &error];
         if (!success)  {
             NSLog(@"📕 Port override failed due to: %@", error);
