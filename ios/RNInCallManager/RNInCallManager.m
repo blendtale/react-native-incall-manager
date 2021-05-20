@@ -135,7 +135,7 @@ RCT_EXPORT_METHOD(start:(NSString *)mediaType
                    auto:(BOOL)_auto
         ringbackUriType:(NSString *)ringbackUriType)
 {
-    NSLog("🤟 Starting InCall manager 🤟 ")
+    NSLog(@"🤟 Starting InCall manager 🤟 ");
     if (_audioSessionInitialized) {
         return;
     }
@@ -175,16 +175,17 @@ RCT_EXPORT_METHOD(start:(NSString *)mediaType
     [self setKeepScreenOn:YES];
     _audioSessionInitialized = YES;
     //self.debugAudioSession()
-    NSLog("🤟 Audio Session Initalized 🤟 ")
+    NSLog(@"🤟 Audio Session Initalized 🤟 ");
 }
 
 RCT_EXPORT_METHOD(chooseAudioRoute: (NSString *)audioRoute  Promise:(RCTPromiseResolveBlock)resolve
                                  reject:(RCTPromiseRejectBlock)reject) {
-    NSLog(@"📘 Selected Audio Route: %@", audioRoute);
+    NSLog(@"💂‍♂️💂‍♂️ choseAudio Route Called");
+    NSLog(@"👨‍💻 Selected Audio Route: %@", audioRoute);
     BOOL isWiredHeadsetPluggedIn = [self isWiredHeadsetPluggedIn];
     BOOL isBluetoothDeviceConnected = [self isBluetoothDeviceConnected];
-    NSLog(isWiredHeadsetPluggedIn ? @"Earphone connected" : @"Earphone not connected");
-    NSLog(isBluetoothDeviceConnected ? @"Bluetooth Device Connected" : @"Bluetooth Device not connected");
+    NSLog(isWiredHeadsetPluggedIn ? @"👨‍💻  connected" : @"👨‍💻  not connected");
+    NSLog(isBluetoothDeviceConnected ? @"👨‍💻  Device Connected" : @"👨‍💻  Device not connected");
     BOOL success;
 //    SPEAKER_PHONE,
 //    WIRED_HEADSET,
@@ -205,9 +206,9 @@ RCT_EXPORT_METHOD(chooseAudioRoute: (NSString *)audioRoute  Promise:(RCTPromiseR
         }
         //TODO: Better Error Handling
         if (success) {
-            resolve(@"Audio Route sucessfully changed");
+            resolve(@"🎉 Audio Route sucessfully changed");
         } else {
-            reject(@"error_code", @"getAudioUriJS() failed", RCTErrorWithMessage(@"Failed to change audio route"));
+            reject(@"😭 error_code", @"getAudioUriJS() failed", RCTErrorWithMessage(@"Failed to change audio route"));
         }
     }
 }
@@ -298,7 +299,7 @@ RCT_EXPORT_METHOD(setSpeakerphoneOn:(BOOL)enable)
 - (BOOL)routeAudioFromBluetooth {
     NSError *error = nil;
     _forceSpeakerOn = -1;
-    NSLog(@"📘 Routing audio via Bluetooth");
+    NSLog(@"👉 Routing audio via Bluetooth");
     // Set Input
     _audioSession =  [AVAudioSession sharedInstance];
     for (AVAudioSessionPortDescription* input in [_audioSession availableInputs]) {
@@ -309,14 +310,14 @@ RCT_EXPORT_METHOD(setSpeakerphoneOn:(BOOL)enable)
             @try {
                 [_audioSession overrideOutputAudioPort:AVAudioSessionPortOverrideNone error:&error];
             } @catch (NSException *e)  {
-                NSLog(@"📕 Unable to override audio port none in bluetooth %@", e.reason);
+                NSLog(@"😭 Unable to override audio port none in bluetooth %@", e.reason);
                 return false;
             }
             // set current input to bluetooth
             @try {
                 [_audioSession setPreferredInput:input error:&error];
             } @catch (NSException *e)  {
-                NSLog(@"📕 Unable to set audio input port to bluetooth%@", e.reason);
+                NSLog(@"😭 Unable to set audio input port to bluetooth%@", e.reason);
                 // Set Prefeered route to speaker
                 [self routeAudioFromSpeakerphone];
                 return false;
@@ -324,7 +325,7 @@ RCT_EXPORT_METHOD(setSpeakerphoneOn:(BOOL)enable)
         }
     }
     // set output
-    NSLog(@"📗 Sucessfully changed to bluetooth");
+    NSLog(@"🎊 Sucessfully changed to bluetooth");
     return true;
 }
 
@@ -650,16 +651,20 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
     });
 }
 
+
 - (BOOL)isBluetoothDeviceConnected {
+    NSLog(@"👉 Checking if Bluetooth device is connected");
     NSMutableArray *devices = [NSMutableArray array];
     AVAudioSessionRouteDescription* route = [[AVAudioSession sharedInstance] currentRoute];
     for (AVAudioSessionPortDescription* desc in [route outputs]) {
+        NSLog(@"🧑‍💻 Bluetooth Desc: %@", desc);
         if ([[desc portType] isEqualToString:AVAudioSessionPortBluetoothHFP] ||
             [[desc portType] isEqualToString:AVAudioSessionPortBluetoothA2DP] ||
             [[desc portType] isEqualToString:AVAudioSessionPortBluetoothLE]) {
             [devices addObject:[desc portName]];
         }
     }
+    NSLog(@"🧑‍💻 Bluetooth Devices %@", devices);
     if (!devices || !devices.count){
         return false;
     } else {
@@ -728,8 +733,10 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
 - (BOOL)checkAudioRoute:(NSArray<NSString *> *)targetPortTypeArray
               routeType:(NSString *)routeType
 {
+    //TODO: Checking bluetooth route should be called from here
     AVAudioSessionRouteDescription *currentRoute = _audioSession.currentRoute;
     NSLog(@"👉 Check Audio Route called ");
+    NSLog(@"👨‍💻 Route Type: %@", routeType);
     NSLog(@"👨‍💻 Current Audio Route: %@", currentRoute);
     NSLog(@"👨‍💻 targetPortTypeArray: %@", targetPortTypeArray);
     if (currentRoute != nil) {
@@ -738,10 +745,12 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
             : currentRoute.outputs;
         for (AVAudioSessionPortDescription *portDescription in routes) {
             if ([targetPortTypeArray containsObject:portDescription.portType]) {
+                NSLog(@"🌏 Audio Route for %@ does exist", targetPortTypeArray);
                 return YES;
             }
         }
     }
+    NSLog(@"🌏 Audio Route for %@ does not exist", targetPortTypeArray);
     return NO;
 }
 
@@ -799,6 +808,7 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
 
 - (BOOL)isWiredHeadsetPluggedIn
 {
+    NSLog(@"👉 checking if isWiredHeadset is plusgged in or not");
     // --- only check for a audio device plugged into headset port instead bluetooth/usb/hdmi
     return [self checkAudioRoute:@[AVAudioSessionPortHeadphones]
                        routeType:@"output"]
