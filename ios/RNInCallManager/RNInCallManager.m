@@ -59,6 +59,7 @@
     NSString *_currentAudioRoute;
     BOOL _audioSessionInitialized;
     int _forceSpeakerOn;
+    int _turnBluetoothOn;
     NSString *_recordPermission;
     NSString *_cameraPermission;
     NSString *_media;
@@ -182,10 +183,6 @@ RCT_EXPORT_METHOD(chooseAudioRoute: (NSString *)audioRoute  Promise:(RCTPromiseR
                                  reject:(RCTPromiseRejectBlock)reject) {
     NSLog(@"💂‍♂️💂‍♂️ choseAudio Route Called");
     NSLog(@"👨‍💻 Selected Audio Route: %@", audioRoute);
-    BOOL isWiredHeadsetPluggedIn = [self isWiredHeadsetPluggedIn];
-    BOOL isBluetoothDeviceConnected = [self isBluetoothDeviceConnected];
-    NSLog(isWiredHeadsetPluggedIn ? @"👨‍💻  connected" : @"👨‍💻  not connected");
-    NSLog(isBluetoothDeviceConnected ? @"👨‍💻  Device Connected" : @"👨‍💻  Device not connected");
     BOOL success;
 //    SPEAKER_PHONE,
 //    WIRED_HEADSET,
@@ -197,12 +194,13 @@ RCT_EXPORT_METHOD(chooseAudioRoute: (NSString *)audioRoute  Promise:(RCTPromiseR
     if (![_userSelectedAudioRoute isEqualToString:_currentAudioRoute]) {
         if ([audioRoute  isEqual: @"SPEAKER_PHONE"]) {
             _forceSpeakerOn = 1;
-            success = [self routeAudioFromSpeakerphone];
-        } else if ([audioRoute  isEqual: @"WIRED_HEADSET"] && isWiredHeadsetPluggedIn) {
-            
+            [self updateAudioRoute];
+            //TODO Hardcoding Sucess to true here
+            success = true
+        } else if ([audioRoute isEqualToString:@"WIRED_HEADSET"]) {
         } else if ([audioRoute  isEqual: @"EARPIECE"]) {
             success = [self routeAudioFromEarpiece];
-        } else if ([audioRoute  isEqual: @"BLUETOOTH"] && isBluetoothDeviceConnected) {
+        } else if ([audioRoute isEqualToString:@"BLUETOOTH"]) {
             _forceSpeakerOn = 0;
             success = [self routeAudioFromBluetooth];
         }
@@ -300,7 +298,6 @@ RCT_EXPORT_METHOD(setSpeakerphoneOn:(BOOL)enable)
 
 - (BOOL)routeAudioFromBluetooth {
     NSError *error = nil;
-    _forceSpeakerOn = -1;
     NSLog(@"👉 Routing audio via Bluetooth");
     // Set Input
     _audioSession =  [AVAudioSession sharedInstance];
@@ -673,7 +670,8 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
     }
 }
 
-- (void)updateAudioRoute
+//TODO: Rewrite this function so that we manage bluetooth, wiredHeadset and all the updates from here
+- (BOOL)updateAudioRoute
 {
     NSLog(@" 👉 RNInCallManager.updateAudioRoute(): [Enter] forceSpeakerOn flag=%d media=%@ category=%@ mode=%@", _forceSpeakerOn, _media, _audioSession.category, _audioSession.mode);
     //self.debugAudioSession()
@@ -696,7 +694,8 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
             audioMode = AVAudioSessionModeVideoChat;
             [self stopProximitySensor];
         }
-    } else { // use default behavior
+    //Bluetooth device
+    }  else { // use default behavior
         NSLog(@"👨‍💻 Else Audio Route");
         overrideAudioPort = AVAudioSessionPortOverrideNone;
         overrideAudioPortString = @".None";
@@ -725,8 +724,10 @@ RCT_EXPORT_METHOD(getIsWiredHeadsetPluggedIn:(RCTPromiseResolveBlock)resolve
         [self audioSessionSetMode:audioMode
                        callerMemo:NSStringFromSelector(_cmd)];
         NSLog(@"👨‍💻 RNInCallManager.updateAudioRoute() audio mode has changed to %@", audioMode);
+        return true
     } else {
         NSLog(@"👨‍💻 RNInCallManager.updateAudioRoute() did NOT change audio mode");
+        return false
     }
     //self.debugAudioSession()
 }
